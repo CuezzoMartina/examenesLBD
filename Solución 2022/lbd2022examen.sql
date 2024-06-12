@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `lbd2022examen`.`Autores` (
   `idAutor` VARCHAR(11) NOT NULL,
   `apellido` VARCHAR(40) NOT NULL,
   `nombre` VARCHAR(20) NOT NULL,
-  `telefono` CHAR(12) DEFAULT ('UNKNOWN') NOT NULL,
+  `telefono` CHAR(12) NOT NULL DEFAULT ('UNKNOWN'),
   `domicilio` VARCHAR(40) NULL,
   `ciudad` VARCHAR(20) NULL,
   `estado` CHAR(2) NULL,
@@ -40,10 +40,10 @@ DROP TABLE IF EXISTS `lbd2022examen`.`Editoriales` ;
 
 CREATE TABLE IF NOT EXISTS `lbd2022examen`.`Editoriales` (
   `idEditorial` CHAR(4) NOT NULL,
-  `nombre` VARCHAR(40) NOT NULL,
-  `ciudad` VARCHAR(20) NULL UNIQUE,
+  `nombre` VARCHAR(40) NOT NULL UNIQUE,
+  `ciudad` VARCHAR(20) NULL,
   `estado` CHAR(2) NULL,
-  `pais` VARCHAR(30) DEFAULT 'USA' NOT NULL,
+  `pais` VARCHAR(30) NOT NULL DEFAULT 'USA',
   PRIMARY KEY (`idEditorial`))
 ENGINE = InnoDB;
 
@@ -56,7 +56,7 @@ DROP TABLE IF EXISTS `lbd2022examen`.`Titulos` ;
 CREATE TABLE IF NOT EXISTS `lbd2022examen`.`Titulos` (
   `idTitulo` VARCHAR(6) NOT NULL,
   `titulo` VARCHAR(80) NOT NULL,
-  `genero` CHAR(12) DEFAULT 'UNDECIDED' NOT NULL,
+  `genero` CHAR(12) NOT NULL DEFAULT 'UNDECIDED',
   `idEditorial` CHAR(4) NOT NULL,
   `precio` DECIMAL(8,2) NULL CHECK(precio > 0),
   `sinopsis` VARCHAR(200) NULL,
@@ -163,4 +163,103 @@ SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
 /********************************************************************************************************************************/
 
+/* Crear una vista llamada VCantidadVentas que muestre por cada tienda su código, cantidad total de ventas y el importe total 
+de todas esas ventas. La salida, mostrada en la siguiente tabla, deberá estar ordenada descendentemente según la cantidad total 
+de ventas y el importe de las mismas. Incluir el código con la consulta a la vista. */
 
+drop view if exists VCantidadVentas;
+create view VCantidadVentas as
+select 
+    t.idTienda as `Id Tienda`,
+    count(d.cantidad) as `Cantidad de Ventas`,
+    sum(d.cantidad*ti.precio) as `Importe Total de Ventas`
+from 
+	Tiendas t 
+    left join Ventas v on t.idTienda=v.idTienda
+    left join Detalles d on v.codigoVenta=d.codigoVenta
+    left join Titulos ti on ti.idTitulo=d.idTitulo
+group by
+	t.idTienda
+order by 
+	`Cantidad de Ventas`desc,
+    `Importe Total de Ventas` desc;
+
+select * from VCantidadVentas;
+
+/*********************************************************************************************************************/
+
+/* Realizar un procedimiento almacenado llamado NuevaEditorial para dar de alta una editorial, incluyendo el control
+ de errores lógicos y mensajes de error necesarios (implementar la lógica del manejo de errores empleando parámetros de salida). 
+ Incluir el código con la llamada al procedimiento probando todos los casos con datos incorrectos y uno con datos correctos. */
+
+drop procedure if exists NuevaEditorial;
+DELIMITER //
+create procedure NuevaEditorial (
+	pidEditorial char(4), 
+    pnombre varchar(40), 
+    pciudad varchar(20), 
+    pestado char(2), 
+    ppais varchar(30), 
+    out mensaje varchar(60)
+    )
+salir: begin
+/*
+    -- Verificar si ppais es nulo o no
+    if ppais is null then
+        set ppais = 'USA'; -- Si ppais es nulo, usar el valor por defecto
+    end if;
+*/
+-- Controlo que no haya una editorial con el mismo nombre
+    if exists (select * from Editoriales where nombre=pnombre) then
+		set mensaje = 'Error: Ya existe una editorial con este nombre';
+		leave salir;
+    end if;
+-- Controlo que el nombre de la editorial no sea null
+	if pnombre is null then
+		set mensaje = 'Error: La editorial debe tener un nombre';
+		leave salir;
+	end if;
+-- Controlo que no haya una editorial con la misma iD
+	if exists (select * from Editoriales where idEditorial = pidEditorial) then
+		set mensaje = 'Error: El Id de la editorial ya existe';
+		leave salir;
+	end if;
+-- Controlo que el id no sea nulo
+	if pidEditorial is null then
+		set mensaje = 'Error: La editorial debe tener un Id';
+		leave salir;
+    else
+		start transaction;
+			insert into Editoriales values (pidEditorial, pnombre, pciudad, pestado, ppais);
+			set mensaje = 'Editorial creada con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+
+-- Ya existe editorial con este nombre
+call NuevaEditorial('1000', 'New Moon Books', null, null, null, @mensaje);
+select @mensaje as Mensaje;
+
+-- Nombre null
+call NuevaEditorial('1000', 'H', null, null, null, @mensaje);
+select @mensaje as Mensaje;
+
+-- idEditorial ya existe
+call NuevaEditorial('0736', 'New Editorial', null, null, null, @mensaje);
+select @mensaje as Mensaje;
+
+-- No tiene id
+call NuevaEditorial(null, 'New Editorial', null, null, null, @mensaje);
+select @mensaje as Mensaje;
+
+delete from Editoriales where idEditorial='1000';
+-- Éxito
+call NuevaEditorial('1000', 'New Editorial', null, null, 'USA', @mensaje);
+select @mensaje as Mensaje;
+
+select * from Editoriales where idEditorial='1000';
+
+/************************************************************************************************************************/
+
+/* */
