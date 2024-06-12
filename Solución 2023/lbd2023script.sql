@@ -53,8 +53,8 @@ DROP TABLE IF EXISTS `lbd2023examen`.`Pedidos` ;
 
 CREATE TABLE IF NOT EXISTS `lbd2023examen`.`Pedidos` (
   `idPedido` INT NOT NULL,
-  `fecha` DATETIME NOT NULL,
   `idCliente` INT NOT NULL,
+  `fecha` DATETIME NOT NULL,
   PRIMARY KEY (`idPedido`),
   CONSTRAINT `idCliente`
     FOREIGN KEY (`idCliente`)
@@ -88,10 +88,10 @@ DROP TABLE IF EXISTS `lbd2023examen`.`Entregas` ;
 
 CREATE TABLE IF NOT EXISTS `lbd2023examen`.`Entregas` (
   `idEntrega` INT NOT NULL,
-  `fecha` DATETIME NOT NULL,
   `idSucursal` INT NOT NULL,
-  `idBandaHoraria` INT NOT NULL,
   `idPedido` INT NOT NULL AUTO_INCREMENT,
+  `fecha` DATETIME NOT NULL,
+  `idBandaHoraria` INT NOT NULL,
   PRIMARY KEY (`idEntrega`),
   CONSTRAINT `fk_Entregas_BandasHorarias1`
     FOREIGN KEY (`idBandaHoraria`)
