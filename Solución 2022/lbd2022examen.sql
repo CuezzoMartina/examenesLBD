@@ -266,3 +266,39 @@ select * from Editoriales where idEditorial='1000';
 títulos del mismo. Por cada título del autor especificado se deberá mostrar su código y título, género, 
 nombre de la editorial, precio, sinopsis y fecha de publicación. La salida, mostrada en la siguiente tabla, deberá 
 estar ordenada alfabéticamente según el título. Incluir en el código la llamada al procedimiento. */
+
+drop procedure if exists BuscarTitulosPorAutor;
+DELIMITER //
+create procedure BuscarTitulosPorAutor (
+	pidAutor varchar(11),
+    out mensaje varchar(60)
+    )
+begin
+    if not exists (select * from Autores where pidAutor=idAutor) then
+		set mensaje = 'El autor no existe';
+	else
+		start transaction;
+		select 
+			t.idTitulo as `Código`,
+			t.titulo as `Título`,
+			t.genero as `Género`,
+			e.nombre as `Editorial`,
+			t.precio as `Precio`,
+			t.sinopsis as `Sinopsis`,
+            t.fechaPublicacion as `Fecha`
+		from 
+			Titulos t 
+			left join TitulosDelAutor ta on ta.idTitulo = t.idTitulo
+			left join Editoriales e on e.idEditorial = t.idEditorial
+		where ta.idAutor=pidAutor;
+        set mensaje = 'Autor encontrado con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+
+call BuscarTitulosPorAutor('409-56-7008', @mensaje);
+select @mensaje as Mensaje;
+
+/**************************************************************************************************************/
+
