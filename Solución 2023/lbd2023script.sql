@@ -37,8 +37,8 @@ DROP TABLE IF EXISTS `lbd2023examen`.`Clientes` ;
 
 CREATE TABLE IF NOT EXISTS `lbd2023examen`.`Clientes` (
   `idCliente` INT NOT NULL,
-  `nombre` VARCHAR(50) NOT NULL,
-  `apellido` VARCHAR(50) NOT NULL,
+  `apellidos` VARCHAR(50) NOT NULL,
+  `nombres` VARCHAR(50) NOT NULL,
   `dni` VARCHAR(10) NOT NULL,
   `domicilio` VARCHAR(100) NOT NULL,
   PRIMARY KEY (`idCliente`))
@@ -117,10 +117,10 @@ CREATE INDEX `fk_Entregas_Pedidos1_idx` ON `lbd2023examen`.`Entregas` (`idPedido
 DROP TABLE IF EXISTS `lbd2023examen`.`Productos` ;
 
 CREATE TABLE IF NOT EXISTS `lbd2023examen`.`Productos` (
-  `idProductos` INT NOT NULL,
+  `idProducto` INT NOT NULL,
   `nombre` VARCHAR(150) NOT NULL,
   `precio` FLOAT NOT NULL,
-  PRIMARY KEY (`idProductos`),
+  PRIMARY KEY (`idProducto`),
   CHECK (`precio` > 0))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb3;
@@ -158,3 +158,147 @@ CREATE INDEX `fk_ProductoDelPedido_Pedidos_idx` ON `lbd2023examen`.`ProductoDelP
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+
+/*------------------------------------------------------------------------------------------------------------------------*/
+
+/* Crear una vista llamada VEntregas que muestre por cada sucursal su nombre, el identificador del pedido que entregó, 
+   la fecha en la que se hizo el pedido, la fecha en la que fue entregado junto con la banda horaria, y el cliente 
+   que hizo el pedido. La salida, mostrada en la siguiente tabla, deberá estar ordenada ascendentemente según el nombre 
+   de la sucursal, fecha del pedido y fecha de entrega (tener en cuenta las sucursales que pudieran no tener entregas). 
+   Incluir el código con la consulta a la vista. */
+   
+drop view if exists VEntregas;
+create view VEntregas as
+select 
+    s.nombre as `Sucursal`,
+    p.idPedido as `Pedido`,
+    date(p.fecha) as `F. pedido`,
+    date(e.fecha) as `F. entrega`,
+    b.nombre as `Banda`,
+    concat(c.apellidos, ', ', c.nombres, ' (', c.dni, ')') as `Cliente`
+from 
+	Sucursales s 
+    left join Entregas e on e.idSucursal=s.idSucursal
+    left join Pedidos p on p.idPedido=e.idPedido
+    left join BandasHorarias b on b.idBandaHoraria=e.idBandaHoraria
+    left join Clientes c on c.idCliente=p.idCliente
+order by 
+	s.nombre asc,
+    p.fecha asc,
+    e.fecha asc;
+
+select * from VEntregas;
+
+/*----------------------------------------------------------------------------------------------------------------------------*/
+
+/* Realizar un procedimiento almacenado llamado NuevoProducto para dar de alta un producto, incluyendo el control de errores 
+lógicos y mensajes de error necesarios (implementar la lógica del manejo de errores empleando parámetros de salida). Incluir el
+código con la llamada al procedimiento probando todos los casos con datos incorrectos y uno con datos correctos. */
+
+drop procedure if exists NuevoProducto;
+DELIMITER //
+create procedure NuevoProducto (
+	pidProducto int, 
+    pnombre varchar(150), 
+    pprecio float, 
+    out mensaje varchar(60)
+    )
+salir: begin
+-- Controlo que no haya un producto con el mismo nombre
+    if exists (select * from productos where nombre=pnombre) then
+		set mensaje = 'Error: Ya existe un producto con este nombre';
+		leave salir;
+    end if;
+-- Controlo que el nombre del producto no sea null y tenga más de 15 caracteres
+	if pnombre is null or length(pnombre) < 10 then
+		set mensaje = 'Error: El nombre debe tener al menos 10 caracteres';
+		leave salir;
+-- Controlo que el precio sea mayor que cero o not null
+	elseif pprecio is null or pprecio <= 0 then 
+		set mensaje = 'Error: El precio no es válido';
+		leave salir;
+    else 
+		start transaction;
+		insert into productos (idProducto, nombre, precio) 
+			values (pidProducto, pnombre, pprecio);
+		set mensaje = 'OK';
+		commit;
+    end if;
+end //
+DELIMITER ;
+
+-- Ya existe un producto con ese nombre
+call NuevoProducto(21, 'Fitbit Versa 3', 1000, @mensaje);
+select @mensaje as Mensaje;
+
+-- El nombre no es válido
+call NuevoProducto(21, 'Prueba', 1000, @mensaje);
+select @mensaje as Mensaje;
+  
+-- El precio no es válido
+call NuevoProducto(21, 'Nuevo Producto', -4, @mensaje);
+select @mensaje as Mensaje;
+
+-- OK
+call NuevoProducto(21, 'Nuevo Producto', 1000, @mensaje);
+select @mensaje as Mensaje;
+
+ /*-------------------------------------------------------------------------------------------------------*/
+ 
+ /* Realizar un procedimiento almacenado llamado BuscarPedidos que reciba el identificador de un pedido y 
+ muestre los datos del mismo. Por cada pedido mostrará el identificador del producto, nombre, precio de lista, 
+ cantidad, precio de venta y total. Además en la última fila mostrará los datos del pedido (fecha, cliente y total del pedido). 
+ La salida, mostrada en la siguiente tabla, deberá estar ordenada alfabéticamente según el nombre del producto. 
+ Incluir en el código la llamada al procedimiento. */
+ 
+ 
+drop procedure if exists BuscarPedidos;
+DELIMITER //
+create procedure BuscarPedidos (
+	pid int,
+    out mensaje varchar(60)
+    )
+begin
+    if not exists (select * from pedidos where pid=idPedido) then
+		set mensaje = 'El pedido no existe';
+	else
+		start transaction;
+		select 
+			prod.idProducto as `Id Producto`,
+			prod.nombre as `Nombre`,
+			prod.precio as `Precio de lista`,
+			pp.cantidad as `Cantidad`,
+			pp.precio as `Precio de venta`,
+			pp.precio * pp.cantidad as `Total`
+		from 
+			Pedidos ped 
+			left join ProductoDelPedido pp on pp.idPedido = ped.idPedido 
+			left join Productos prod on prod.idProducto = pp.idProducto
+			left join Clientes c on ped.idCliente = c.idCliente
+		where ped.idPedido=pid
+		union
+		select
+			"Fecha:" as `Id Producto`,
+			cast(date(ped.fecha) as char) as `Nombre`,
+			"Cliente:" as `Precio de lista`,
+			concat(c.apellidos, ', ', c.nombres) as `Cantidad`,
+			"Total:" as `Precio de venta`,
+			sum(pp.cantidad * pp.precio) as `Total`
+		from
+			Pedidos ped
+			left join Clientes c on ped.idCliente = c.idCliente
+			left join productodelpedido pp on pp.idPedido = ped.idPedido
+		where ped.idPedido = pid;
+        set mensaje = 'Pedido encontrado con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+
+call BuscarPedidos(1,@mensaje);
+select @mensaje as Mensaje;
+
+
+/* ------------------------------------------------------------------------------------------------------- */
+
