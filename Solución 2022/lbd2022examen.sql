@@ -302,4 +302,20 @@ select @mensaje as Mensaje;
 
 /**************************************************************************************************************/
 
-/* ej5  */
+/* Utilizando triggers, implementar la lógica para que en caso que se quiera borrar una editorial referenciada por 
+un título se informe mediante un mensaje de error que no se puede. Incluir el código con los borrados de una 
+editorial que no tiene títulos, y otro de una que sí.  */
+
+drop trigger if exists trigger_editorial_borrado;
+DELIMITER //
+create trigger trigger_producto_borrado
+before delete on Editoriales for each row
+begin
+	if exists (select * from Titulos where idEditorial=old.idEditorial) then
+		signal sqlstate '45000' 
+		set message_text = "La editorial no se puede borrar porque está referenciada por un título";
+	end if;
+end //
+DELIMITER ;
+
+delete from Editoriales where idEditorial = '0736';
