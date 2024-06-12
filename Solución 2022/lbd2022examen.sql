@@ -262,4 +262,7 @@ select * from Editoriales where idEditorial='1000';
 
 /************************************************************************************************************************/
 
-/* */
+/* Realizar un procedimiento almacenado llamado BuscarTitulosPorAutor que reciba el código de un autor y muestre los 
+títulos del mismo. Por cada título del autor especificado se deberá mostrar su código y título, género, 
+nombre de la editorial, precio, sinopsis y fecha de publicación. La salida, mostrada en la siguiente tabla, deberá 
+estar ordenada alfabéticamente según el título. Incluir en el código la llamada al procedimiento. */
