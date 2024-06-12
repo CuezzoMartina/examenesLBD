@@ -131,17 +131,17 @@ DEFAULT CHARACTER SET = utf8mb3;
 DROP TABLE IF EXISTS `lbd2023examen`.`ProductoDelPedido` ;
 
 CREATE TABLE IF NOT EXISTS `lbd2023examen`.`ProductoDelPedido` (
-  `idProducto` INT NOT NULL,
   `idPedido` INT NOT NULL,
+  `idProducto` INT NOT NULL,
   `cantidad` FLOAT NOT NULL,
   `precio` FLOAT NOT NULL,
   PRIMARY KEY (`idProducto`, `idPedido`),
-  CONSTRAINT `idPedido`
+  CONSTRAINT `fk_idPedido`
     FOREIGN KEY (`idPedido`)
     REFERENCES `lbd2023examen`.`Pedidos` (`idPedido`),
-  CONSTRAINT `idProducto`
+  CONSTRAINT `fk_idProducto`
     FOREIGN KEY (`idProducto`)
-    REFERENCES `lbd2023examen`.`Productos` (`idProductos`),
+    REFERENCES `lbd2023examen`.`Productos` (`idProducto`),
     CHECK (`precio` > 0))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb3;
@@ -235,7 +235,7 @@ select @mensaje as Mensaje;
 -- El nombre no es válido
 call NuevoProducto(21, 'Prueba', 1000, @mensaje);
 select @mensaje as Mensaje;
-  
+ 
 -- El precio no es válido
 call NuevoProducto(21, 'Nuevo Producto', -4, @mensaje);
 select @mensaje as Mensaje;
@@ -243,6 +243,7 @@ select @mensaje as Mensaje;
 -- OK
 call NuevoProducto(21, 'Nuevo Producto', 1000, @mensaje);
 select @mensaje as Mensaje;
+
 
  /*-------------------------------------------------------------------------------------------------------*/
  
@@ -302,3 +303,23 @@ select @mensaje as Mensaje;
 
 /* ------------------------------------------------------------------------------------------------------- */
 
+/* Utilizando triggers, implementar la lógica para que en caso que se quiera borrar un producto incluido 
+en un pedido se informe mediante un mensaje de error que no se puede.
+Incluir el código con los borrados de un producto no incluido en ningún pedido, y otro de uno que sí. */
+
+drop trigger if exists trigger_producto_borrado;
+DELIMITER //
+create trigger trigger_producto_borrado
+before delete on Productos for each row
+begin
+	if exists (select * from ProductoDelPedido where idProducto=old.idProducto) then
+		signal sqlstate '45000' 
+		set message_text = "El producto no se puede borrar porque este pertenece a un pedido";
+	end if;
+end //
+DELIMITER ;
+
+delete from Productos where idProducto = 1;
+
+insert into Productos values (22, 'Producto de prueba', 500);
+delete from Productos where idProducto = 22;
