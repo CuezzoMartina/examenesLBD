@@ -259,3 +259,41 @@ select * from RankingMateriasPrimas;
 
 /*******************************************************************************************************************/
 
+/* Implementar la lógica para llevar una auditoría para la operación del apartado 2. Se deberá auditar el usuario que la hizo, 
+la fecha y hora de la operación, la máquina desde donde se la hizo y toda la información necesaria para la auditoría. */
+
+drop table if exists `AuditoriasMateriaPrima` ;
+create table `AuditoriasMateriaPrima` (
+  `IdAuditoria` 	int not null auto_increment,
+  `Usuario` 		varchar(45) not null,  
+  `Maquina` 		varchar(45) not null,  
+  `Fecha` 			datetime not null,
+  `IDMateriaPrima` 	int not null,
+  `Nombre`			varchar(35) not null,
+  `PrecioUnitario` 	float null,
+  `Unidad` 			varchar(10) not null,
+  primary key (`IdAuditoria`)
+) engine=INNODB;
+
+drop trigger if exists TBorrarMateriaPrima;
+DELIMITER //
+create trigger TBorrarMateriaPrima
+after delete on MateriaPrima for each row
+begin
+	insert into AuditoriasMateriaPrima values (
+		default,
+        substring_index(user(), '@', 1), 
+		substring_index(user(), '@', -1), 
+		now(),
+        old.IDMateriaPrima,
+        old.Nombre,
+        old.PrecioUnitario,
+        old.Unidad
+	);
+end //
+DELIMITER ;
+
+insert into MateriaPrima values (100, 'MateriaPrima', 10, 1);
+call BorrarMateriaPrima(100,@mensaje);
+
+select * from AuditoriasMateriaPrima;
