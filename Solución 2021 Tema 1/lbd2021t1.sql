@@ -311,5 +311,29 @@ select @mensaje as Mensaje;
 sucursal o un personal se informe mediante un mensaje de error que no se puede. Incluir el código con los borrados 
 de una dirección para la cual no hay sucursales ni personal, y otro para la que sí. */
 
+drop trigger if exists TBorrarDireccion;
+DELIMITER //
+create trigger TBorrarDireccion
+before delete on Direcciones for each row
+begin
+	if exists (select * from Personal where idDireccion=old.idDireccion) then
+		signal sqlstate '45000' 
+		set message_text = "La dirección no se puede borrar porque está referenciada por un personal";
+	end if;
+    if exists (select * from Sucursales where idDireccion=old.idDireccion) then
+		signal sqlstate '45001' 
+		set message_text = "La dirección no se puede borrar porque está referenciada por una sucursal";
+	end if;
+end //
+DELIMITER ;
 
+/* Referenciada por personal */
+delete from Direcciones where idDireccion = 3;
+
+/* Referenciada por sucursal */
+delete from Direcciones where idDireccion = 1;
+
+/* Dirección sin referenciar */
+insert into Direcciones values (1001, 'Calle de prueba', 'Municipio', null, 'telefono');
+delete from Direcciones where idDireccion = 1001;
 
