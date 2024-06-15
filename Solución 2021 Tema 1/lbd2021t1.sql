@@ -162,6 +162,23 @@ SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
 
-/*********************************************************************************************************************************************************************/
+/***************************************************************************************************************/
 
+/* Crear una vista llamada VCantidadPeliculas que muestre por cada película su código, título y la cantidad
+total entre las distintas sucursales. La salida deberá estar ordenada alfabéticamente según el título de las películas. 
+Incluir el código con la consulta a la vista. */
+
+drop view if exists VCantidadPeliculas;
+create view VCantidadPeliculas as
+select 
+	p.idPelicula as `Id Película`,
+    p.titulo as `Título`,
+    count(*) as `Cantidad`
+from 
+	Peliculas p
+    left join inventario i on i.idPelicula = p.idPelicula
+group by p.idPelicula
+order by p.titulo;
+
+select * from VCantidadPeliculas;
 
