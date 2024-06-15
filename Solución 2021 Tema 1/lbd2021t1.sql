@@ -208,15 +208,19 @@ salir: begin
 		set mensaje = 'Ya existe una dirección con este ID';
         leave salir;
 	end if;
-    if pidDireccion = null or pidDireccion = 0 then
+    if pidDireccion is null or pidDireccion = 0 then
 		set mensaje = 'El ID no es válido';
         leave salir;
 	end if;
-    if pmunicipio = null then
+    if pmunicipio is null then
 		set mensaje = 'La dirección debe tener un municipio';
         leave salir;
 	end if;
-    if pcalleYNumero = null or length(pcalleYNumero) < 5 then
+    if ptelefono is null then
+		set mensaje = 'La dirección debe tener un telefono asociado';
+        leave salir;
+	end if;
+    if pcalleYNumero is null or length(pcalleYNumero) < 5 then
 		set mensaje = 'La calle y el número deben tener por lo menos 5 caracteres';
         leave salir;
 	else
@@ -229,27 +233,83 @@ end //
 DELIMITER ;
 
 -- Ya existe dirección con esta calle y nro
-call NuevaDireccion(1000, '47 MySakila Drive', 'Alberta', null, null, @mensaje);
+call NuevaDireccion(1000, '47 MySakila Drive', 'Alberta', null, '234522325', @mensaje);
 select @mensaje as Mensaje;
 
 -- Ya existe direccin con este ID
-call NuevaDireccion(1, 'Calle 1 Nro 1', 'Alberta', null, null, @mensaje);
+call NuevaDireccion(1, 'Calle 1 Nro 1', 'Alberta', null, '234522325', @mensaje);
 select @mensaje as Mensaje;
 
 -- El ID no es válido
-call NuevaDireccion(0, 'Calle 1 Nro 1', 'Alberta', null, null, @mensaje);
+call NuevaDireccion(0, 'Calle 1 Nro 1', 'Alberta', null, '234522325', @mensaje);
 select @mensaje as Mensaje;
 
 -- La calle y el número deben tener por lo menos 5 caracteres
-call NuevaDireccion(1000, 'C', 'Alberta', null, null, @mensaje);
+call NuevaDireccion(1000, 'C', 'Alberta', null, '234522325', @mensaje);
 select @mensaje as Mensaje;
 
 -- Debe tener municipio
-call NuevaDireccion(1000, 'Calle 1 Nro 1', null, null, null, @mensaje);
+call NuevaDireccion(1000, 'Calle 1 Nro 1', null, null, '234522325', @mensaje);
+select @mensaje as Mensaje;
+
+-- Debe tener telefono
+call NuevaDireccion(1000, 'Calle 1 Nro 1', 'Municipio', null, null, @mensaje);
 select @mensaje as Mensaje;
 
 -- OK
-call NuevaDireccion(1000, 'Calle 1 Nro 1', 'Alberta', null, null, @mensaje);
+call NuevaDireccion(1000, 'Calle 1 Nro 1', 'Alberta', null, '234522325', @mensaje);
 select @mensaje as Mensaje;
 
-select * from direcciones;
+select * from Direcciones where idDireccion = 1000;
+
+/************************************************************************************************************/
+
+/* Realizar un procedimiento almacenado llamado BuscarPeliculasPorGenero que reciba el código de un género y 
+muestre sucursal por sucursal, película por película, la cantidad con el mismo. Por cada película del género 
+especificado se deberá mostrar su código y título, el código de la sucursal, la cantidad y la calle y número 
+de la sucursal. La salida deberá estar ordenada alfabéticamente según el título de las películas. 
+Incluir en el código la llamada al procedimiento. */
+
+drop procedure if exists BuscarPeliculasPorGenero;
+DELIMITER //
+create procedure BuscarPeliculasPorGenero (
+	pidGenero char(10),
+    out mensaje varchar(60)
+    )
+begin
+    if not exists (select * from Generos where pidGenero=idGenero) then
+		set mensaje = 'El género no existe';
+	else
+		start transaction;
+		select 
+			p.idPelicula as `Id Película`,
+			p.titulo as `Título`,
+			s.idSucursal as `Id Sucursal`,
+			count(*) as `Cantidad`,
+			d.calleYNumero as `Calle y número`
+		from 
+			GenerosDePeliculas gp 
+			left join Peliculas p on p.idPelicula = gp.idPelicula
+			left join inventario i on i.idPelicula = p.idPelicula
+            left join Sucursales s on s.idSucursal = i.idSucursal
+            inner join Direcciones d on d.idDireccion = s.idDireccion
+		where gp.idGenero=pidGenero
+        group by p.idPelicula, s.idSucursal
+        order by p.titulo;
+        set mensaje = 'Género encontrado con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+
+call BuscarPeliculasPorGenero('6', @mensaje);
+select @mensaje as Mensaje;
+
+/******************************************************************************************************************/
+
+/* Utilizando triggers, implementar la lógica para que en caso que se quiera borrar una dirección referenciada por una 
+sucursal o un personal se informe mediante un mensaje de error que no se puede. Incluir el código con los borrados 
+de una dirección para la cual no hay sucursales ni personal, y otro para la que sí. */
+
+
+
