@@ -1,4 +1,3 @@
-USE `final5` ;
 
 INSERT INTO `Categorias` (`Nombre`) VALUES ('Tartas');
 INSERT INTO `Categorias` (`Nombre`) VALUES ('Cremas Frías');

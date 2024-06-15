@@ -140,3 +140,47 @@ ENGINE = InnoDB;
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+
+/***********************************************************************************************************/
+
+/* Realizar un procedimiento almacenado, llamado BorrarMateriaPrima, para borrar una materia prima. El mismo deberá 
+incluir el control de errores lógicos y mensajes de error necesarios. Incluir el código con la llamada al 
+procedimiento probando todos los casos con datos incorrectos y uno con datos correctos. */
+
+drop procedure if exists BorrarMateriaPrima;
+DELIMITER //
+create procedure BorrarMateriaPrima (
+	pIDMateriaPrima int, 
+    out mensaje varchar(100)
+    )
+salir: begin
+	if not exists (select * from MateriaPrima where IDMateriaPrima = pIDMateriaPrima) then
+		set mensaje = 'No existe la materia prima';
+        leave salir;
+	elseif exists (select * from Composicion where IDMateriaPrima = pIDMateriaPrima) then
+		set mensaje = 'No se puede eliminar la materia prima porque está referenciada en una composición';
+        leave salir;
+	else
+		start transaction;
+			delete from MateriaPrima where IDMateriaPrima = pIDMateriaPrima;
+            set mensaje = 'Materia prima borrada con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+
+-- No existe
+call BorrarMateriaPrima(100, @mensaje);
+select @mensaje as Mensaje;
+
+-- Está referenciada
+call BorrarMateriaPrima(2, @mensaje);
+select @mensaje as Mensaje;
+
+-- OK
+call BorrarMateriaPrima(18, @mensaje);
+select @mensaje as Mensaje;
+
+/*********************************************************************************************************/
+
