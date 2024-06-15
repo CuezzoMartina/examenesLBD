@@ -35,6 +35,7 @@ INSERT INTO `Recetas` (`IDReceta`, `Rendimiento`, `Procedimiento`, `Nombre`, `Un
 INSERT INTO `Recetas` (`IDReceta`, `Rendimiento`, `Procedimiento`, `Nombre`, `Unidad`, `Categoria`) VALUES(2, 10.0, 'Mezclar ...', 'Masa frola', 'porciones', 'Masas bases');
 INSERT INTO `Recetas` (`IDReceta`, `Rendimiento`, `Procedimiento`, `Nombre`, `Unidad`, `Categoria`) VALUES(3, 3.0, 'Armar ...', 'Lemon Pie', 'porciones', 'Tartas');
 INSERT INTO `Recetas` (`IDReceta`, `Rendimiento`, `Procedimiento`, `Nombre`, `Unidad`, `Categoria`) VALUES(4, 6.0, 'Mezclar ...', 'Bizcochuelo', 'porciones', 'Masas bases');
+INSERT INTO `Recetas` (`IDReceta`, `Rendimiento`, `Procedimiento`, `Nombre`, `Unidad`, `Categoria`) VALUES(5, 3.0, 'Batir ...', 'Relleno Lemon', 'porciones', 'Rellenos');
 
 INSERT INTO `Composicion` (`IDReceta`, `IDMateriaPrima`, `Cantidad`) VALUES ('4', '3', 2);
 INSERT INTO `Composicion` (`IDReceta`, `IDMateriaPrima`, `Cantidad`) VALUES ('4', '2', 60);
@@ -55,9 +56,12 @@ INSERT INTO `Composicion` (`IDReceta`, `IDMateriaPrima`, `Cantidad`) VALUES ('3'
 INSERT INTO `Composicion` (`IDReceta`, `IDMateriaPrima`, `Cantidad`) VALUES ('3', '13', 60);
 INSERT INTO `Composicion` (`IDReceta`, `IDMateriaPrima`, `Cantidad`) VALUES ('3', '10', 10);
 INSERT INTO `Composicion` (`IDReceta`, `IDMateriaPrima`, `Cantidad`) VALUES ('4', '14', 250);
+INSERT INTO `Composicion` (`IDReceta`, `IDMateriaPrima`, `Cantidad`) VALUES ('5', '2', 250);
+INSERT INTO `Composicion` (`IDReceta`, `IDMateriaPrima`, `Cantidad`) VALUES ('5', '11', 250);
+INSERT INTO `Composicion` (`IDReceta`, `IDMateriaPrima`, `Cantidad`) VALUES ('5', '13', 250);
 
 INSERT INTO `RecetasRecetas` (`IDReceta`, `IDComponente`, `Cantidad`) VALUES ('3', '1', '650');
 INSERT INTO `RecetasRecetas` (`IDReceta`, `IDComponente`, `Cantidad`) VALUES ('3', '2', '10');
-INSERT INTO `RecetasRecetas` (`IDReceta`, `IDComponente`, `Cantidad`) VALUES ('3', '3', '12');
+INSERT INTO `RecetasRecetas` (`IDReceta`, `IDComponente`, `Cantidad`) VALUES ('3', '5', '1');
 INSERT INTO `RecetasRecetas` (`IDReceta`, `IDComponente`, `Cantidad`) VALUES ('4', '3', '6');
 INSERT INTO `RecetasRecetas` (`IDReceta`, `IDComponente`, `Cantidad`) VALUES ('4', '1', '750');

@@ -184,3 +184,104 @@ select @mensaje as Mensaje;
 
 /*********************************************************************************************************/
 
+/* Realizar un procedimiento almacenado, llamado VerReceta, para que muestre una receta dada. Se deberá 
+mostrar el nombre, rendimiento, unidades, categoría, composición y cantidad (tanto de materia prima como de 
+otra receta que forme parte de la misma) y procedimiento. Al mostrar la composición (tanto de una materia prima
+como de otra receta) mostrar el nombre de la materia prima o de la receta. */
+
+drop procedure if exists VerReceta;
+DELIMITER //
+create procedure VerReceta (
+	pIDReceta int, 
+    out mensaje varchar(100)
+    )
+salir: begin
+	if not exists (select * from Recetas where IDReceta = pIDReceta) then
+		set mensaje = 'No existe la receta';
+        leave salir;
+	else
+		start transaction;
+			select 
+				r.Nombre,
+                r.Rendimiento,
+                r.Unidad,
+                r.Categoria,
+                mp.Nombre as `Composición`,
+                c.Cantidad,
+                r.Procedimiento
+			from
+				Recetas r
+                left join Composicion c on c.IDReceta = r.IDReceta
+                left join MateriaPrima mp on mp.IDMateriaPrima = c.IDMateriaPrima
+			where pIDReceta = r.IDReceta
+			union all
+            select 
+				r.Nombre,
+                r.Rendimiento,
+                r.Unidad,
+                r.Categoria,
+                r.Nombre as `Composición`,
+                rr.Cantidad,
+                r.Procedimiento
+			from 
+				Recetas r
+                left join RecetasRecetas rr on r.IDReceta = rr.IDReceta
+			where pIDReceta = r.IDReceta;
+            set mensaje = 'Se encontró la receta con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+call VerReceta(3,@mensaje);
+
+select 
+	r.IDReceta,
+    r.Nombre,
+    r.Rendimiento,
+    r.Unidad,
+    r.Categoria,
+    rc.Nombre as`Componente`,
+    rr.Cantidad as `Componente Cantidad`,
+    r.Procedimiento
+from
+	Recetas r
+    left join RecetasRecetas rr on r.IDReceta = rr.IDReceta
+    inner join Recetas rc on rc.IDReceta = rr.IDComponente
+where r.IDReceta = 3
+union all
+select
+	r.IDReceta,
+    r.Nombre,
+    r.Rendimiento,
+    r.Unidad,
+    r.Categoria,
+    c.Nombre as`Componente`,
+    c.Cantidad as `Componente Cantidad`,
+    r.Procedimiento
+from
+	Recetas r
+    left join Composicion c on r.IDReceta = c.IDReceta
+where r.IDReceta = 3;
+
+SELECT 
+    r.Nombre AS `Nombre de la Receta`,
+    r.Rendimiento,
+    r.Unidad,
+    r.Categoria,
+    cat.Nombre AS `Categoría`,
+    r.Procedimiento,
+	compRec.Nombre AS `Nombre Componente Receta`,
+    rr.Cantidad AS `Cantidad Componente Receta`,
+    mp.Nombre AS `Nombre Materia Prima`,
+    comp.Cantidad AS `Cantidad Materia Prima`
+FROM 
+    Recetas r
+    LEFT JOIN Categorias cat ON r.Categoria = cat.Nombre
+    LEFT JOIN Composicion comp ON r.IDReceta = comp.IDReceta
+    LEFT JOIN MateriaPrima mp ON comp.IDMateriaPrima = mp.IDMateriaPrima
+    LEFT JOIN RecetasRecetas rr ON r.IDReceta = rr.IDReceta
+    LEFT JOIN Recetas compRec ON rr.IDComponente = compRec.IDReceta
+WHERE 
+    r.IDReceta = 3
+ORDER BY 
+    r.Nombre, compRec.Nombre, mp.Nombre asc;
