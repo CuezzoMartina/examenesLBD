@@ -182,3 +182,74 @@ order by p.titulo;
 
 select * from VCantidadPeliculas;
 
+/***********************************************************************************************************/
+
+/* Realizar un procedimiento almacenado llamado NuevaDireccion para dar de alta una dirección, incluyendo 
+el control de errores lógicos y mensajes de error necesarios (implementar la lógica del manejo de errores 
+empleando parámetros de salida). Incluir el código con la llamada al procedimiento probando todos los casos 
+con datos incorrectos y uno con datos correctos. */
+
+drop procedure if exists NuevaDireccion;
+DELIMITER //
+create procedure NuevaDireccion (
+	pidDireccion int,
+    pcalleYNumero varchar(50),
+    pmunicipio varchar(20),
+    pcodigoPostal varchar(10),
+    ptelefono varchar(20),
+    out mensaje varchar(60)
+    )
+salir: begin
+	if exists (select * from Direcciones where calleYNumero = pcalleYNumero) then
+		set mensaje = 'Ya existe una dirección con esta calle y número';
+        leave salir;
+	end if;
+    if exists (select * from Direcciones where idDireccion = pidDireccion) then
+		set mensaje = 'Ya existe una dirección con este ID';
+        leave salir;
+	end if;
+    if pidDireccion = null or pidDireccion = 0 then
+		set mensaje = 'El ID no es válido';
+        leave salir;
+	end if;
+    if pmunicipio = null then
+		set mensaje = 'La dirección debe tener un municipio';
+        leave salir;
+	end if;
+    if pcalleYNumero = null or length(pcalleYNumero) < 5 then
+		set mensaje = 'La calle y el número deben tener por lo menos 5 caracteres';
+        leave salir;
+	else
+		start transaction;
+		insert into Direcciones values (pidDireccion, pcalleYNumero, pmunicipio, pcodigoPostal, ptelefono);
+        set mensaje = 'Dirección creada con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+
+-- Ya existe dirección con esta calle y nro
+call NuevaDireccion(1000, '47 MySakila Drive', 'Alberta', null, null, @mensaje);
+select @mensaje as Mensaje;
+
+-- Ya existe direccin con este ID
+call NuevaDireccion(1, 'Calle 1 Nro 1', 'Alberta', null, null, @mensaje);
+select @mensaje as Mensaje;
+
+-- El ID no es válido
+call NuevaDireccion(0, 'Calle 1 Nro 1', 'Alberta', null, null, @mensaje);
+select @mensaje as Mensaje;
+
+-- La calle y el número deben tener por lo menos 5 caracteres
+call NuevaDireccion(1000, 'C', 'Alberta', null, null, @mensaje);
+select @mensaje as Mensaje;
+
+-- Debe tener municipio
+call NuevaDireccion(1000, 'Calle 1 Nro 1', null, null, null, @mensaje);
+select @mensaje as Mensaje;
+
+-- OK
+call NuevaDireccion(1000, 'Calle 1 Nro 1', 'Alberta', null, null, @mensaje);
+select @mensaje as Mensaje;
+
+select * from direcciones;
