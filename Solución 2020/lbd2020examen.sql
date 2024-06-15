@@ -202,86 +202,60 @@ salir: begin
 	else
 		start transaction;
 			select 
+				r.IDReceta,
 				r.Nombre,
-                r.Rendimiento,
-                r.Unidad,
-                r.Categoria,
-                mp.Nombre as `Composición`,
-                c.Cantidad,
-                r.Procedimiento
+				r.Rendimiento,
+				r.Unidad,
+				r.Categoria,
+				rc.Nombre as`Componente`,
+				rr.Cantidad as `Componente Cantidad`,
+				r.Procedimiento
 			from
 				Recetas r
-                left join Composicion c on c.IDReceta = r.IDReceta
-                left join MateriaPrima mp on mp.IDMateriaPrima = c.IDMateriaPrima
-			where pIDReceta = r.IDReceta
+				left join RecetasRecetas rr on r.IDReceta = rr.IDReceta
+				inner join Recetas rc on rc.IDReceta = rr.IDComponente
+			where r.IDReceta = 3
 			union all
-            select 
+			select
+				r.IDReceta,
 				r.Nombre,
-                r.Rendimiento,
-                r.Unidad,
-                r.Categoria,
-                r.Nombre as `Composición`,
-                rr.Cantidad,
-                r.Procedimiento
-			from 
+				r.Rendimiento,
+				r.Unidad,
+				r.Categoria,
+				mp.Nombre as`Componente`,
+				c.Cantidad as `Componente Cantidad`,
+				r.Procedimiento
+			from
 				Recetas r
-                left join RecetasRecetas rr on r.IDReceta = rr.IDReceta
+				left join Composicion c on r.IDReceta = c.IDReceta
+				inner join MateriaPrima mp on mp.IDMateriaPrima = c.IDMateriaPrima
 			where pIDReceta = r.IDReceta;
             set mensaje = 'Se encontró la receta con éxito';
 		commit;
 	end if;
 end //
 DELIMITER ;
+
 call VerReceta(3,@mensaje);
 
-select 
-	r.IDReceta,
-    r.Nombre,
-    r.Rendimiento,
-    r.Unidad,
-    r.Categoria,
-    rc.Nombre as`Componente`,
-    rr.Cantidad as `Componente Cantidad`,
-    r.Procedimiento
-from
-	Recetas r
-    left join RecetasRecetas rr on r.IDReceta = rr.IDReceta
-    inner join Recetas rc on rc.IDReceta = rr.IDComponente
-where r.IDReceta = 3
-union all
-select
-	r.IDReceta,
-    r.Nombre,
-    r.Rendimiento,
-    r.Unidad,
-    r.Categoria,
-    c.Nombre as`Componente`,
-    c.Cantidad as `Componente Cantidad`,
-    r.Procedimiento
-from
-	Recetas r
-    left join Composicion c on r.IDReceta = c.IDReceta
-where r.IDReceta = 3;
+/******************************************************************************************************************/
 
-SELECT 
-    r.Nombre AS `Nombre de la Receta`,
-    r.Rendimiento,
-    r.Unidad,
-    r.Categoria,
-    cat.Nombre AS `Categoría`,
-    r.Procedimiento,
-	compRec.Nombre AS `Nombre Componente Receta`,
-    rr.Cantidad AS `Cantidad Componente Receta`,
-    mp.Nombre AS `Nombre Materia Prima`,
-    comp.Cantidad AS `Cantidad Materia Prima`
-FROM 
-    Recetas r
-    LEFT JOIN Categorias cat ON r.Categoria = cat.Nombre
-    LEFT JOIN Composicion comp ON r.IDReceta = comp.IDReceta
-    LEFT JOIN MateriaPrima mp ON comp.IDMateriaPrima = mp.IDMateriaPrima
-    LEFT JOIN RecetasRecetas rr ON r.IDReceta = rr.IDReceta
-    LEFT JOIN Recetas compRec ON rr.IDComponente = compRec.IDReceta
-WHERE 
-    r.IDReceta = 3
-ORDER BY 
-    r.Nombre, compRec.Nombre, mp.Nombre asc;
+/* Crear una vista, llamada RankingMateriasPrimas, para que muestre un ranking con las materias primas que se emplean 
+en mayor cantidad en las distintas recetas.  */
+
+drop view if exists RankingMateriasPrimas;
+create view RankingMateriasPrimas as
+select
+	mp.Nombre as `Materia Prima`,
+    count(*) as `Cantidad de veces usada`
+from
+	MateriaPrima mp
+    left join Composicion c on c.IDMateriaPrima = mp.IDMateriaPrima
+group by mp.IDMateriaPrima
+order by `Cantidad de veces usada` desc
+limit 5;
+
+select * from RankingMateriasPrimas;
+
+/*******************************************************************************************************************/
+
