@@ -211,7 +211,7 @@ create procedure NuevoTrabajo (
     pfechaPresentacion date,
     pfechaAprobacion date,
     pfechaFinalizacion date,
-	out mensaje varchar(120)
+	out mensaje varchar(150)
     )
 salir: begin
 -- Controlo que no haya un trabajo con el mismo nombre
@@ -225,7 +225,7 @@ salir: begin
 		leave salir;
 	end if;
 -- Controlo que no haya un trabajo con el mismo ID
-	if exists (select * from Trabajo where idTrabajo = pidTrabajo) then
+	if exists (select * from Trabajos where idTrabajo = pidTrabajo) then
 		set mensaje = 'Error: Ya existe un trabajo con este ID';
 		leave salir;
 	end if;
@@ -243,15 +243,69 @@ end //
 DELIMITER ;
 
 -- Título ya existe
-call NuevoTrabajo(100, 'Implementación de políticas de tráfico para enrutamiento con BGP', 6, 'Redes', '2023-05-04','2024-05-24', null, @mensaje);
+call NuevoTrabajo(100, 'Implementación de políticas de tráfico para enrutamiento con BGP', 6, 'Redes', '2023-05-04','2023-05-24', null, @mensaje);
 select @mensaje as Mensaje;
 
 -- Título no puede ser null
-call NuevoTrabajo(100, null, 6, 'Redes', '2023-05-04','2024-05-24', null, @mensaje);
+call NuevoTrabajo(100, null, 6, 'Redes', '2023-05-04','2023-05-24', null, @mensaje);
 select @mensaje as Mensaje;
 
-call NuevoTrabajo(100, 'Título Trabajo', 6, 'Redes', '2023-05-04','2024-05-24', null, @mensaje);
+-- Fecha presentación no puede ser null
+call NuevoTrabajo(100, 'Título Trabajo', 6, 'Redes', null,'2023-05-24', null, @mensaje);
 select @mensaje as Mensaje;
 
-call NuevoTrabajo(100, 'Título Trabajo', 6, 'Redes', '2023-05-04','2024-05-24', null, @mensaje);
+-- F.Presentación > F.Aprbación
+call NuevoTrabajo(100, 'Título Trabajo', 6, 'Redes', '2023-06-04','2023-05-24', null, @mensaje);
 select @mensaje as Mensaje;
+
+-- OK
+call NuevoTrabajo(100, 'Título Trabajo', 6, 'Redes', '2023-05-04','2023-05-24', null, @mensaje);
+select @mensaje as Mensaje;
+
+select * from Trabajos where idTrabajo = 100;
+
+/****************************************************************************************************************************/
+
+/* Realizar un trigger, llamado AuditarTrabajos, para que cuando se agregue un trabajo con una duración superior a los 12 meses, 
+o inferior a 3 meses, registre en una tabla de auditoría los detalles del trabajo (todos los campos de la tabla Trabajos), el usuario 
+que lo agregó y la fecha en la que lo hizo */
+
+drop table if exists `AuditoriasTrabajos` ;
+create table if not exists `AuditoriasTrabajos` (
+  `idAuditoria` 		int not null auto_increment,
+  `usuario` 			varchar(45) not null,   
+  `fecha` 				datetime not null,
+  `idTrabajos` 			int not null,
+  `titulo`				varchar(100) not null,
+  `duracion` 			int not null,
+  `area` 				enum('Hardware', 'Redes', 'Software') not null,
+  `fechaPresentacion` 	date not null,
+  `fechaAprobacion` 	date not null,
+  `fechaFinalizacion` 	date null,
+  primary key (`IdAuditoria`)
+) engine=INNODB;
+
+drop trigger if exists AuditarTrabajos;
+DELIMITER //
+create trigger AuditarTrabajos 
+after insert on Trabajos for each row
+begin
+	if new.duracion > 12 or new.duracion < 3 then 
+		insert into AuditoriasTrabajos values (
+			default, 
+			substring_index(user(), '@', 1),  -- Usuario
+			now(),
+			new.idTrabajo,
+			new.titulo,
+			new.duracion,
+			new.area,
+			new.fechaPresentacion,
+			new.fechaAprobacion,
+			new.fechaFinalizacion);
+		end if;
+end //
+DELIMITER ;
+
+insert into Trabajos values (101, 'Despliegue de laboratorios virtualizados de SDN utilizando Open vSwitch', 2, 'Redes', '2024-05-04','2024-05-24', null);
+
+select * from AuditoriasTrabajos;
