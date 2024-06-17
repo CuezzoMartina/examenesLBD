@@ -194,3 +194,64 @@ end //
 DELIMITER ;
 
 call DetalleRoles(2015, 2017);
+
+/***************************************************************************************************/
+
+ /* Crear un procedimiento almacenado llamado NuevoTrabajo, para que agregue un trabajo nuevo. 
+ El procedimiento deberá efectuar las comprobaciones necesarias (incluyendo que la fecha de aprobación sea igual o mayor 
+ a la de presentación) y devolver los mensajes correspondientes (uno por cada condición de error, y otro por el éxito) */
+ 
+drop procedure if exists NuevoTrabajo;
+DELIMITER //
+create procedure NuevoTrabajo (
+	pidTrabajo int, 
+	ptitulo varchar(100), 
+   	pduracion int,  
+   	parea enum('Hardware','Redes','Software'), 
+    pfechaPresentacion date,
+    pfechaAprobacion date,
+    pfechaFinalizacion date,
+	out mensaje varchar(120)
+    )
+salir: begin
+-- Controlo que no haya un trabajo con el mismo nombre
+    if exists (select * from Trabajos where titulo = ptitulo) then
+		set mensaje = 'Error: Ya existe un trabajo con este título.';
+		leave salir;
+    end if;
+-- Controlo que atributos no sean null
+	if pidTrabajo is null or ptitulo is null or pduracion is null or parea is null or pfechaPresentacion is null or pfechaAprobacion is null then
+		set mensaje = 'Error: El trabajo debe tener un identificador, un título, una duración, un área, una fecha de presentación y una fecha de aprobación';
+		leave salir;
+	end if;
+-- Controlo que no haya un trabajo con el mismo ID
+	if exists (select * from Trabajo where idTrabajo = pidTrabajo) then
+		set mensaje = 'Error: Ya existe un trabajo con este ID';
+		leave salir;
+	end if;
+-- Controlo f.presentación <= f.aprobación
+	if pfechaPresentacion > pfechaAprobacion then
+		set mensaje = 'Error: La fecha de presentación debe ser anterior o igual a la fecha de aprobación';
+		leave salir;
+    else
+		start transaction;
+			insert into Trabajos values (pidTrabajo, ptitulo, pduracion, parea, pfechaPresentacion, pfechaAprobacion, pfechaFinalizacion);
+			set mensaje = 'Trabajo creado con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+
+-- Título ya existe
+call NuevoTrabajo(100, 'Implementación de políticas de tráfico para enrutamiento con BGP', 6, 'Redes', '2023-05-04','2024-05-24', null, @mensaje);
+select @mensaje as Mensaje;
+
+-- Título no puede ser null
+call NuevoTrabajo(100, null, 6, 'Redes', '2023-05-04','2024-05-24', null, @mensaje);
+select @mensaje as Mensaje;
+
+call NuevoTrabajo(100, 'Título Trabajo', 6, 'Redes', '2023-05-04','2024-05-24', null, @mensaje);
+select @mensaje as Mensaje;
+
+call NuevoTrabajo(100, 'Título Trabajo', 6, 'Redes', '2023-05-04','2024-05-24', null, @mensaje);
+select @mensaje as Mensaje;
