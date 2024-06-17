@@ -129,7 +129,103 @@ CREATE TABLE IF NOT EXISTS `lbd2019examen`.`Habilidades` (
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
+CREATE UNIQUE INDEX ui_PersonaConocimiento ON lbd2019examen.Habilidades (persona ASC, conocimiento ASC) VISIBLE;
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+/*****************************************************************************************************************/
+
+/* Crear una vista llamada VHabilidades que muestre las personas, nombre del puesto, nombre del conocimiento y nombre 
+del nivel. El formato de salida deberá ser Apellidos, Nombres, Puesto, Conocimiento, Nivel, y la lista deberá estar 
+ordenada por apellidos y nombres. Incluir el código con la consulta a la vista. */
+
+drop view if exists VHabilidades;
+create view VHabilidades as
+select
+	p.apellidos as `Apellidos`,
+    p.nombres as `Nombres`,
+    pu.nombre as `Puesto`,
+    c.nombre as `Conocimiento`,
+    n.nombre as `Nivel`
+from
+	Habilidades h 
+	left join Personas p on p.persona = h.persona
+    inner join Puestos pu on pu.puesto = p.puesto
+    inner join Conocimientos c on c.conocimiento = h.conocimiento
+    inner join Niveles n on n.nivel = h.nivel
+order by 
+	p.apellidos, p.nombres asc;
+
+select * from VHabilidades;
+
+/*****************************************************************************************************************/
+
+/* Realizar un procedimiento almacenado llamado NuevaPersona para dar de alta una persona, incluyendo el control 
+de errores lógicos y mensajes de error necesarios (puesto, apellidos, nombres y fecha de ingreso no deben ser nulos, 
+el puesto debe existir, no debe existir otra persona con el identificador de la persona que se quiere agregar). */
+
+drop procedure if exists NuevaPersona;
+DELIMITER //
+create procedure NuevaPersona (
+	ppersona int, 
+	pnombres varchar(25), 
+   	papellidos varchar(25),  
+   	ppuesto int, 
+    pfechaIngreso date,
+    pfechaBaja date,
+	out mensaje varchar(100)
+    )
+salir: begin
+-- Controlo que el puesto exista
+    if not exists (select * from Puestos where puesto = ppuesto) then
+		set mensaje = 'Error: No existe el puesto.';
+		leave salir;
+    end if;
+-- Controlo que atributos no sean null
+	if ppersona is null or pnombres is null or papellidos is null or ppuesto is null or pfechaIngreso is null then
+		set mensaje = 'Error: La persona debe tener identificador, nombre, apellido, puesto y fecha de ingreso.';
+		leave salir;
+	end if;
+-- Controlo que no haya persona con la misma ID
+	if exists (select * from Personas where persona = ppersona) then
+		set mensaje = 'Error: Ya existe una persona con este ID.';
+		leave salir;
+    else
+		start transaction;
+			insert into Personas values (ppersona, pnombres, papellidos, ppuesto, pfechaIngreso, pfechaBaja);
+			set mensaje = 'Persona creada con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+
+-- No existe puesto
+call NuevaPersona(100,'Nombre', 'Apellido', 4, '2023-01-02', null, @mensaje);
+select @mensaje as Mensaje;
+
+-- Nombre no puede ser null
+call NuevaPersona(100, null, 'Apellido', 3, '2023-01-02', null, @mensaje);
+select @mensaje as Mensaje;
+
+-- fecha de ingreso no puede ser null
+call NuevaPersona(100,'Nombre', 'Apellido', 3, null, null, @mensaje);
+select @mensaje as Mensaje;
+
+-- El id ya existe
+call NuevaPersona(1,'Nombre', 'Apellido', 3, '2023-01-02', null, @mensaje);
+select @mensaje as Mensaje;
+
+-- OK
+call NuevaPersona(100,'Nombre', 'Apellido', 3, '2023-01-02', null, @mensaje);
+select @mensaje as Mensaje;
+
+/***************************************************************************************************/
+
+/* Realizar un procedimiento almacenado llamado PersonasConConocimiento que reciba el identificador 
+de una categoría y de un conocimiento, y devuelva la cantidad de personas con el conocimiento y categoría 
+especificados, y el nivel de los mismos. El formato de salida deberá ser Categoría (el nombre), 
+Conocimiento (el nombre), Nivel (el nombre) y Personas (la cantidad). */
+
+

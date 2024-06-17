@@ -1,4 +1,3 @@
-USE `final3` ;
 
 -- DELETE FROM Habilidades;
 -- DELETE FROM Personas;
