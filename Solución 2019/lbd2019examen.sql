@@ -228,4 +228,30 @@ de una categoría y de un conocimiento, y devuelva la cantidad de personas con e
 especificados, y el nivel de los mismos. El formato de salida deberá ser Categoría (el nombre), 
 Conocimiento (el nombre), Nivel (el nombre) y Personas (la cantidad). */
 
+drop procedure if exists PersonasConConocimiento;
+DELIMITER //
+create procedure PersonasConConocimiento (
+	pcategoria int,
+    pconocimiento int
+    )
+salir: begin
+	select 
+		cat.nombre as `Categoría`,
+		c.nombre as `Conocimiento`,
+		n.nombre as `Nivel`,
+		count(h.persona) as `Cantidad`
+	from
+		Habilidades h 
+        join Conocimientos c on c.conocimiento = h.conocimiento
+        join Categorias cat on c.categoria = cat.categoria
+        join Niveles n on n.nivel = h.nivel
+	where h.conocimiento = pconocimiento and c.categoria = pcategoria
+	group by `Categoría`,`Conocimiento`,`Nivel`;
+end //
+DELIMITER ;
 
+call PersonasConConocimiento(1,1);
+
+/**********************************************************************************************************/
+
+/* */ 
