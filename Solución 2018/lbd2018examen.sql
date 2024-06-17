@@ -159,3 +159,38 @@ SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
 /************************************************************************************************************/
+
+/* Crear un procedimiento llamado DetalleRoles, que reciba un rango de años y que muestre: Año, DNI, Apellidos, 
+Nombres, Tutor, Cotutor y Jurado, donde Tutor, Cotutor y Jurado muestran la cantidad de trabajos en los que un 
+profesor participó en un trabajo con ese rol entre el rango de fechas especificado. El listado se mostrará ordenado 
+por el año, apellidos, nombres y DNI (se pueden emplear vistas u otras estructuras para lograr la funcionalidad solicitada. 
+Para obtener el año de una fecha se puede emplear la función YEAR()) */
+
+drop procedure if exists DetalleRoles;
+DELIMITER //
+create procedure DetalleRoles (
+	anio1 int, 
+	anio2 int
+    )
+begin
+	select 
+		year(rt.desde) as `Año`,
+        p.dni as `DNI`,
+        pe.apellidos as `Apellidos`,
+        pe.nombres as `Nombres`,
+        (select count(*) from RolesEnTrabajos where rol = 'Tutor' and p.dni = dni and year(desde) between anio1 and anio2) as `Tutor`,
+        (select count(*) from RolesEnTrabajos where rol = 'Cotutor' and p.dni = dni and year(desde) between anio1 and anio2) as `Cotutor`,
+        (select count(*) from RolesEnTrabajos where rol = 'Jurado' and p.dni = dni and year(desde) between anio1 and anio2) as `Jurado`
+	from
+		RolesEnTrabajos rt 
+        left join Profesores p on p.dni = rt.dni
+        inner join Personas pe on p.dni = pe.dni
+	where year(rt.desde) between anio1 and anio2
+	group by 
+		rt.dni, year(rt.desde)
+	order by
+		year(rt.desde), pe.apellidos, pe.nombres, p.dni;	
+end //
+DELIMITER ;
+
+call DetalleRoles(2015, 2017);
