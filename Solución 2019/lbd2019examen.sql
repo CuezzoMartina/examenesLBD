@@ -254,4 +254,20 @@ call PersonasConConocimiento(1,1);
 
 /**********************************************************************************************************/
 
-/* */ 
+/* Utilizando triggers, implementar la lógica para que en caso que se quiera borrar un nivel, y exista alguna 
+habilidad con el mismo, se informe mediante un mensaje de error que no se puede. Incluir el código con el borrado 
+de un nivel para el cual no hay habilidades, y otro para el que sí. */ 
+
+drop trigger if exists trigger_borrado_nivel;
+DELIMITER //
+create trigger trigger_borrado_nivel
+before delete on Niveles for each row
+begin
+	if exists (select * from Habilidades where nivel = old.nivel) then
+		signal sqlstate '45000' 
+		set message_text = "El nivel no puede ser borrado ya que está referenciado por una habilidad";
+	end if;
+end //
+DELIMITER ;
+
+delete from Niveles where nivel = 4;
