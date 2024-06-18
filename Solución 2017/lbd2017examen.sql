@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS `lbd2017examen`.`Productos` (
   `Nombre` VARCHAR(50) NOT NULL,
   `Color` VARCHAR(15) NULL,
   `Precio` DECIMAL(10,4) NOT NULL,
-  `IdCategoria` INT NOT NULL,
+  `IdCategoria` INT NULL,
   PRIMARY KEY (`IdProducto`),
   CONSTRAINT `fk_Productos_Categorias1`
     FOREIGN KEY (`IdCategoria`)
@@ -194,7 +194,7 @@ salir: begin
 		leave salir;
     end if;
 -- Controlo que columnas no sean null
-	if pNombre is null or pIdProducto is null or pPrecio is null or pIdCategoria is null then
+	if pNombre is null or pIdProducto is null or pPrecio is null then
 		set mensaje = 'Error: El producto debe tener un ID, nombre, precio y categoría';
 		leave salir;
 	end if;
@@ -227,3 +227,33 @@ select @mensaje as Mensaje;
 call sp_CargarProducto(100, 'Nuevo Producto', null, 100, 1, @mensaje);
 select @mensaje as Mensaje;
 
+/**************************************************************************************************************************/
+
+/* Realizar una vista, llamada VTotalVentas, en donde se muestre el número de venta, la fecha de venta  en el formato “dd/mm/aaaa”, 
+el apellido y nombre del cliente, el nombre del producto, la categoría (NULL o vacío mostrar S/C), la cantidad de productos, 
+el precio unitario y colocar en una nueva fila el “Total” de ventas recaudado */
+
+drop view if exists VTotalVentas;
+create view VTotalVentas as
+select
+	v.IdVenta as `Número de Venta`,
+    date_format(date(v.Fecha), '%d/%m/%Y') as `Fecha de Venta`,
+	concat(c.Apellidos, ' ', c.Nombres) as `Cliente`,
+    p.Nombre as `Producto`,
+    coalesce(cat.Nombre, 'S/C') as `Categoría`,
+    d.Cantidad as `Cantidad`,
+    d.Precio as `Precio Unitario`,
+    (d.Precio * `Cantidad`) as `Total`
+from
+	Ventas v
+    left join Clientes c on c.IdCliente = v.IdCliente
+    left join Detalles d on d.IdVenta = v.IdVenta
+    inner join Productos p on d.IdProducto = p.IdProducto
+    inner join Categorias cat on cat.IdCategoria = p.IdCategoria
+order by v.IdVenta;
+
+select * from VTotalVentas;
+
+/***************************************************************************************************************/
+
+/*  */
