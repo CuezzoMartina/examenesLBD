@@ -170,3 +170,60 @@ CREATE INDEX `fk_Detalles_Ventas1_idx` ON `lbd2017examen`.`Detalles` (`IdVenta` 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+
+/**************************************************************************************************************/
+
+/* Crear un SP, llamado sp_CargarProducto, que permita dar de alta un producto, efectuar las 
+comprobaciones necesarias y devolver los mensajes de error correspondiente */
+
+drop procedure if exists sp_CargarProducto;
+DELIMITER //
+create procedure sp_CargarProducto (
+	pIdProducto int, 
+	pNombre varchar(50), 
+   	pColor varchar(15),  
+   	pPrecio decimal(10,4), 
+    pIdCategoria int,
+	out mensaje varchar(100)
+    )
+salir: begin
+-- Controlo que no haya un producto con el mismo nombre
+    if exists (select * from Productos where Nombre=pNombre) then
+		set mensaje = 'Error: Ya existe un producto con este nombre';
+		leave salir;
+    end if;
+-- Controlo que columnas no sean null
+	if pNombre is null or pIdProducto is null or pPrecio is null or pIdCategoria is null then
+		set mensaje = 'Error: El producto debe tener un ID, nombre, precio y categoría';
+		leave salir;
+	end if;
+-- Controlo que no haya un producto con el mismo ID
+	if exists (select * from Productos where IdProducto = pIdProducto) then
+		set mensaje = 'Error: Ya existe un producto con este ID';
+		leave salir;
+    else
+		start transaction;
+			insert into Productos values (pIdProducto, pNombre, pColor, pPrecio, pIdCategoria);
+			set mensaje = 'Producto creado con éxito';
+		commit;
+	end if;
+end //
+DELIMITER ;
+
+-- Ya existe producto con ese nombre
+call sp_CargarProducto(100, 'Sport-100 Helmet, Red', null, 100, 1, @mensaje);
+select @mensaje as Mensaje;
+
+-- Valor no puede ser null
+call sp_CargarProducto(100, null, null, 100, 1, @mensaje);
+select @mensaje as Mensaje;
+
+-- Ya existe id
+call sp_CargarProducto(707, 'Nuevo Producto', null, 100, 1, @mensaje);
+select @mensaje as Mensaje;
+
+-- OK
+call sp_CargarProducto(100, 'Nuevo Producto', null, 100, 1, @mensaje);
+select @mensaje as Mensaje;
+
