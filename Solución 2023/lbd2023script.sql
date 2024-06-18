@@ -253,53 +253,43 @@ select @mensaje as Mensaje;
  La salida, mostrada en la siguiente tabla, deberá estar ordenada alfabéticamente según el nombre del producto. 
  Incluir en el código la llamada al procedimiento. */
  
- 
 drop procedure if exists BuscarPedidos;
 DELIMITER //
 create procedure BuscarPedidos (
-	pid int,
-    out mensaje varchar(60)
+	pid int
     )
 begin
-    if not exists (select * from pedidos where pid=idPedido) then
-		set mensaje = 'El pedido no existe';
-	else
-		start transaction;
-		select 
-			prod.idProducto as `Id Producto`,
-			prod.nombre as `Nombre`,
-			prod.precio as `Precio de lista`,
-			pp.cantidad as `Cantidad`,
-			pp.precio as `Precio de venta`,
-			pp.precio * pp.cantidad as `Total`
-		from 
-			Pedidos ped 
-			left join ProductoDelPedido pp on pp.idPedido = ped.idPedido 
-			left join Productos prod on prod.idProducto = pp.idProducto
-			left join Clientes c on ped.idCliente = c.idCliente
-		where ped.idPedido=pid
-		union
-		select
-			"Fecha:" as `Id Producto`,
-			cast(date(ped.fecha) as char) as `Nombre`,
-			"Cliente:" as `Precio de lista`,
-			concat(c.apellidos, ', ', c.nombres) as `Cantidad`,
-			"Total:" as `Precio de venta`,
-			sum(pp.cantidad * pp.precio) as `Total`
-		from
-			Pedidos ped
-			left join Clientes c on ped.idCliente = c.idCliente
-			left join productodelpedido pp on pp.idPedido = ped.idPedido
-		where ped.idPedido = pid;
-        set mensaje = 'Pedido encontrado con éxito';
-		commit;
-	end if;
+	select 
+		prod.idProducto as `Id Producto`,
+		prod.nombre as `Nombre`,
+		prod.precio as `Precio de lista`,
+		pp.cantidad as `Cantidad`,
+		pp.precio as `Precio de venta`,
+		pp.precio * pp.cantidad as `Total`
+	from 
+		Pedidos ped 
+		left join ProductoDelPedido pp on pp.idPedido = ped.idPedido 
+		left join Productos prod on prod.idProducto = pp.idProducto
+	where ped.idPedido=pid
+	union
+	select
+		"Fecha:" as `Id Producto`,
+		date(ped.fecha) as `Nombre`,
+		"Cliente:" as `Precio de lista`,
+		concat(c.apellidos, ', ', c.nombres) as `Cantidad`,
+		"Total:" as `Precio de venta`,
+		sum(pp.cantidad * pp.precio) as `Total`
+	from
+		Pedidos ped
+		left join Clientes c on ped.idCliente = c.idCliente
+		left join ProductoDelPedido pp on pp.idPedido = ped.idPedido
+	where ped.idPedido = pid
+    group by
+		ped.fecha, c.apellidos, c.nombres;
 end //
 DELIMITER ;
 
-call BuscarPedidos(1,@mensaje);
-select @mensaje as Mensaje;
-
+call BuscarPedidos(1);
 
 /* ------------------------------------------------------------------------------------------------------- */
 
