@@ -256,4 +256,44 @@ select * from VTotalVentas;
 
 /***************************************************************************************************************/
 
-/*  */
+/* Realizar un trigger llamado AuditarOfertas el cual se dispare luego de insertar una oferta cuyo descuento tenga un 
+valor mayor o igual al 10%, los datos se deben guardar en la tabla auditoria guardando el nuevo valor de id oferta, 
+descuento, fecha inicio, fecha fin, cantidad mínima y la cantidad máxima, el usuario la fecha en que se realizó  */
+
+drop table if exists `AuditoriasOfertas` ;
+create table if not exists `AuditoriasOfertas` (
+  `IdAuditoria` 	int not null auto_increment,
+  `Usuario` 		varchar(45) not null,   
+  `Fecha` 			datetime not null,
+  `IdOferta` 		int not null,
+  `Descuento`		float not null,
+  `FechaInicio` 	datetime not null,
+  `FechaFin` 		datetime not null,
+  `CantidadMinima` 	int not null,
+  `CantidadMaxima` 	int null,
+  primary key (`IdAuditoria`)
+) engine=INNODB;
+
+drop trigger if exists AuditarOfertas;
+DELIMITER //
+create trigger AuditarOfertas 
+after insert on Ofertas for each row
+begin
+	insert into AuditoriasOfertas values (
+		default, 
+		substring_index(user(), '@', 1),  -- Usuario
+		now(),
+		new.IdOferta,
+		new.Descuento, 
+		new.FechaInicio,
+        new.FechaFin,
+        new.CantidadMinima,
+        new.CantidadMaxima
+	);
+end //
+DELIMITER ;
+
+insert into Ofertas values(100, 0.15, '2023-05-06','2023-06-14', 2, null);
+
+select * from AuditoriasOfertas;
+
